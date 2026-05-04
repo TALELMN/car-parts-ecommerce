@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produit - H.KAR Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo"><span class="logo-hash">#</span><span class="logo-text">H.KAR</span></a>
+      <nav class="nav" id="mainNav"></nav>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
+        <a href="/cart.html" class="icon-btn cart-btn"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCount">0</span></a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+    <div class="search-bar" id="searchBar">
+      <input type="text" placeholder="Rechercher des pièces..." id="searchInput" onkeypress="if(event.key==='Enter') doSearch()">
+      <button onclick="doSearch()"><i class="fas fa-search"></i></button>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu"></div>
+
+  <div class="breadcrumb">
+    <div class="container" id="breadcrumbContent">
+      <a href="/">Accueil</a> / <a href="/products.html">Produits</a> / <span id="breadcrumbProduct">...</span>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="product-detail" id="productDetail">
+        <div class="product-loading"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2026 HKAR - Société Pièces Auto Ferchichi. Tous droits réservés</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let currentProduct = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await renderNav();
+      updateCartCount();
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (id) loadProduct(id);
+    });
+
+    async function loadProduct(id) {
+      const res = await fetch(`/api/products/${id}`);
+      if (!res.ok) {
+        document.getElementById('productDetail').innerHTML = '<p>Produit non trouvé</p>';
+        return;
+      }
+      const p = await res.json();
+      currentProduct = p;
+      document.title = p.name + ' - H.KAR Shop';
+      document.getElementById('breadcrumbProduct').textContent = p.name;
+
+      // Build category breadcrumb if available
+      if (p.category_id) {
+        const cats = await (await fetch('/api/categories')).json();
+        const cat = cats.find(c => c.id === p.category_id);
+        const bc = document.getElementById('breadcrumbContent');
+        if (cat && cat.parent_id) {
+          const parent = cats.find(c => c.id === cat.parent_id);
+          bc.innerHTML = `<a href="/">Accueil</a> / <a href="/brand.html?slug=${parent.slug}">${parent.name}</a> / <a href="/products.html?category=${cat.slug}">${cat.name}</a> / <span>${p.name}</span>`;
+        } else if (cat) {
+          bc.innerHTML = `<a href="/">Accueil</a> / <a href="/products.html?category=${cat.slug}">${cat.name}</a> / <span>${p.name}</span>`;
+        }
+      }
+
+      const outOfStock = p.stock <= 0;
+      const lowStock = p.stock > 0 && p.stock <= 3;
+      const stockHtml = outOfStock
+        ? `<div class="stock-status stock-out"><i class="fas fa-times-circle"></i> Rupture de stock</div>`
+        : lowStock
+        ? `<div class="stock-status stock-low"><i class="fas fa-exclamation-triangle"></i> Plus que ${p.stock} en stock !</div>`
+        : `<div class="stock-status stock-ok"><i class="fas fa-check-circle"></i> En stock (${p.stock} disponibles)</div>`;
+
+      document.getElementById('productDetail').innerHTML = `
+        <div class="product-detail-grid">
+          <div class="product-detail-image ${outOfStock ? 'product-out-of-stock' : ''}">
+            ${outOfStock ? '<div class="stock-overlay-large">RUPTURE DE STOCK</div>' : ''}
+            <img src="${p.image || '/images/placeholder.svg'}" alt="${p.name}">
+          </div>
+          <div class="product-detail-info">
+            <h1>${p.name}</h1>
+            <div class="product-detail-price">
+              <span class="price-current">${p.price.toFixed(2)} DT</span>
+              ${p.old_price ? `<span class="price-old">${p.old_price.toFixed(2)} DT</span>` : ''}
+            </div>
+            ${stockHtml}
+            ${p.category_name ? `<p class="product-detail-cat"><i class="fas fa-tag"></i> ${p.category_name}</p>` : ''}
+            ${p.description ? `<div class="product-detail-desc">${p.description}</div>` : ''}
+
+            ${outOfStock ? `
+              <div class="out-of-stock-block">
+                <i class="fas fa-ban"></i>
+                <p>Ce produit est temporairement indisponible. Contactez-nous pour plus d'informations :</p>
+                <div class="out-of-stock-contacts">
+                  <a href="tel:+21658835092" class="btn-primary"><i class="fas fa-phone"></i> +216 58 835 092</a>
+                  <a href="tel:+21656084023" class="btn-secondary"><i class="fas fa-phone"></i> +216 56 084 023</a>
+                </div>
+              </div>
+            ` : `
+              <div class="product-detail-qty">
+                <button onclick="changeQty(-1)" type="button">-</button>
+                <input type="number" id="qty" value="1" min="1" max="${p.stock}" oninput="validateQty()">
+                <button onclick="changeQty(1)" type="button">+</button>
+              </div>
+              <button class="btn-primary btn-large btn-full" id="addToCartBtn" onclick="addToCartFromDetail()">
+                <i class="fas fa-cart-plus"></i> Ajouter au Panier
+              </button>
+
+              <div class="order-form-box">
+                <h3><i class="fas fa-shipping-fast"></i> Commander directement</h3>
+                <form onsubmit="submitDirectOrder(event)">
+                  <div class="form-group">
+                    <label>Nom et Prénom</label>
+                    <input type="text" name="customer_name" placeholder="Entrez votre nom" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" name="phone" placeholder="Entrez votre téléphone" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Région</label>
+                    <select name="region" required>
+                      <option value="">Sélectionnez votre région</option>
+                      <option>Tunis</option><option>Ariana</option><option>Ben Arous</option>
+                      <option>Manouba</option><option>Nabeul</option><option>Zaghouan</option>
+                      <option>Bizerte</option><option>Béja</option><option>Jendouba</option>
+                      <option>Le Kef</option><option>Siliana</option><option>Sousse</option>
+                      <option>Monastir</option><option>Mahdia</option><option>Sfax</option>
+                      <option>Kairouan</option><option>Kasserine</option><option>Sidi Bouzid</option>
+                      <option>Gabès</option><option>Médenine</option><option>Tataouine</option>
+                      <option>Gafsa</option><option>Tozeur</option><option>Kébili</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Adresse</label>
+                    <input type="text" name="address" placeholder="Entrez votre adresse" required>
+                  </div>
+                  <button type="submit" class="btn-primary btn-full"><i class="fas fa-check"></i> Confirmer la commande</button>
+                </form>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function changeQty(delta) {
+      const input = document.getElementById('qty');
+      let val = parseInt(input.value) + delta;
+      if (val < 1) val = 1;
+      if (val > currentProduct.stock) {
+        val = currentProduct.stock;
+        showToast(`Stock maximum: ${currentProduct.stock}`, true);
+      }
+      input.value = val;
+    }
+
+    function validateQty() {
+      const input = document.getElementById('qty');
+      let val = parseInt(input.value);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > currentProduct.stock) {
+        val = currentProduct.stock;
+        showToast(`Stock maximum: ${currentProduct.stock}`, true);
+      }
+      input.value = val;
+    }
+
+    async function addToCartFromDetail() {
+      const qty = parseInt(document.getElementById('qty').value);
+      if (qty > currentProduct.stock) {
+        showToast(`Stock insuffisant. Maximum: ${currentProduct.stock}`, true);
+        return;
+      }
+      // Check existing cart quantity for this product
+      const cart = getCart();
+      const existing = cart.find(item => item.id === currentProduct.id);
+      const currentInCart = existing ? existing.quantity : 0;
+      if (currentInCart + qty > currentProduct.stock) {
+        showToast(`Vous avez déjà ${currentInCart} dans le panier. Maximum disponible: ${currentProduct.stock}`, true);
+        return;
+      }
+      // Add the requested quantity
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, image: currentProduct.image || '', quantity: qty, stock: currentProduct.stock });
+      }
+      localStorage.setItem('hkar_cart', JSON.stringify(cart));
+      updateCartCount();
+      showToast(`${qty} × ${currentProduct.name} ajouté au panier !`);
+    }
+
+    async function submitDirectOrder(e) {
+      e.preventDefault();
+      const form = e.target;
+      const qty = parseInt(document.getElementById('qty').value);
+      if (qty > currentProduct.stock) {
+        showToast(`Stock insuffisant. Maximum: ${currentProduct.stock}`, true);
+        return;
+      }
+      const order = {
+        customer_name: form.customer_name.value,
+        phone: form.phone.value,
+        region: form.region.value,
+        address: form.address.value,
+        items: [{ product_id: currentProduct.id, product_name: currentProduct.name, quantity: qty, price: currentProduct.price }]
+      };
+      const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
+      const data = await res.json();
+      if (data.id) {
+        showToast(`Commande #${data.id} confirmée ! Total: ${data.total.toFixed(2)} DT`);
+        form.reset();
+        // Reload product to refresh stock
+        loadProduct(currentProduct.id);
+      } else {
+        showToast('Erreur: ' + (data.error || 'Veuillez réessayer'), true);
+      }
+    }
+  </script>
+</body>
+</html>

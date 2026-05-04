@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - H.KAR Pièces Auto</title>
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="login-hash">#</span>
+        <span class="login-brand">H.KAR</span>
+      </div>
+      <h2>Panneau d'administration</h2>
+      <p class="login-subtitle">Connectez-vous pour gérer votre boutique</p>
+      <form onsubmit="doLogin(event)">
+        <div class="form-group">
+          <label><i class="fas fa-user"></i> Nom d'utilisateur</label>
+          <input type="text" id="loginUser" placeholder="admin" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-lock"></i> Mot de passe</label>
+          <input type="password" id="loginPass" placeholder="Mot de passe" required autocomplete="current-password">
+        </div>
+        <div class="login-error" id="loginError"></div>
+        <button type="submit" class="btn-primary btn-full">
+          <i class="fas fa-sign-in-alt"></i> Se connecter
+        </button>
+      </form>
+      <p class="login-hint">Par défaut: admin / admin123</p>
+    </div>
+  </div>
+
+  <!-- Admin Layout -->
+  <div class="admin-layout" id="adminLayout" style="display:none;">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-logo-hash">#</span>
+        <span class="sidebar-brand">H.KAR</span>
+        <span class="sidebar-sub">Admin</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="sidebar-link active" data-page="dashboard">
+          <i class="fas fa-chart-pie"></i> Tableau de bord
+        </a>
+        <a href="#" class="sidebar-link" data-page="products">
+          <i class="fas fa-box-open"></i> Produits
+        </a>
+        <a href="#" class="sidebar-link" data-page="orders">
+          <i class="fas fa-shopping-bag"></i> Commandes
+          <span class="sidebar-badge" id="newOrdersBadge"></span>
+        </a>
+        <a href="#" class="sidebar-link" data-page="categories">
+          <i class="fas fa-tags"></i> Catégories
+        </a>
+        <a href="#" class="sidebar-link" data-page="settings">
+          <i class="fas fa-cog"></i> Paramètres
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <a href="/" target="_blank"><i class="fas fa-external-link-alt"></i> Voir la boutique</a>
+        <a href="#" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <button class="topbar-toggle" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <h1 class="topbar-title" id="pageTitle">Tableau de bord</h1>
+        <div class="topbar-user">
+          <i class="fas fa-user-circle"></i>
+          <span id="adminName">Admin</span>
+        </div>
+      </header>
+
+      <div class="page-content">
+
+        <!-- Dashboard Page -->
+        <div class="page active" id="page-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card stat-primary">
+              <div class="stat-icon"><i class="fas fa-box-open"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statProducts">0</span>
+                <span class="stat-label">Produits</span>
+              </div>
+            </div>
+            <div class="stat-card stat-success">
+              <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statOrders">0</span>
+                <span class="stat-label">Commandes</span>
+              </div>
+            </div>
+            <div class="stat-card stat-warning">
+              <div class="stat-icon"><i class="fas fa-bell"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statNewOrders">0</span>
+                <span class="stat-label">Nouvelles</span>
+              </div>
+            </div>
+            <div class="stat-card stat-info">
+              <div class="stat-icon"><i class="fas fa-coins"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statRevenue">0</span>
+                <span class="stat-label">Revenu (DT)</span>
+              </div>
+            </div>
+            <div class="stat-card" style="border-left:4px solid var(--danger);">
+              <div class="stat-icon" style="background:var(--danger-light);color:var(--danger);"><i class="fas fa-exclamation-triangle"></i></div>
+              <div class="stat-info">
+                <span class="stat-value" id="statOutOfStock">0</span>
+                <span class="stat-label">Rupture de stock</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fas fa-clock"></i> Dernières commandes</h3>
+              </div>
+              <div class="card-body">
+                <table class="table">
+                  <thead>
+                    <tr><th>#</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr>
+                  </thead>
+                  <tbody id="recentOrdersTable"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3><i class="fas fa-chart-bar"></i> Commandes par statut</h3>
+              </div>
+              <div class="card-body">
+                <div id="ordersByStatus" class="status-chart"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products Page -->
+        <div class="page" id="page-products">
+          <div class="page-toolbar">
+            <div class="toolbar-search">
+              <i class="fas fa-search"></i>
+              <input type="text" id="productSearch" placeholder="Rechercher un produit..." oninput="debounce(loadAdminProducts, 300)()">
+            </div>
+            <select id="productCatFilter" onchange="loadAdminProducts()">
+              <option value="">Toutes les catégories</option>
+            </select>
+            <button class="btn-primary" onclick="openProductModal()">
+              <i class="fas fa-plus"></i> Nouveau produit
+            </button>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Image</th><th>Nom</th><th>Catégorie</th><th>Prix</th>
+                    <th>Stock</th><th>Statut</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="productsTable"></tbody>
+              </table>
+              <div class="table-pagination" id="productsPagination"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orders Page -->
+        <div class="page" id="page-orders">
+          <div class="page-toolbar">
+            <div class="toolbar-search">
+              <i class="fas fa-search"></i>
+              <input type="text" id="orderSearch" placeholder="Rechercher par nom, téléphone ou #..." oninput="debounce(loadAdminOrders, 300)()">
+            </div>
+            <select id="orderStatusFilter" onchange="loadAdminOrders()">
+              <option value="all">Tous les statuts</option>
+              <option value="nouvelle">Nouvelle</option>
+              <option value="confirmée">Confirmée</option>
+              <option value="en cours">En cours</option>
+              <option value="livrée">Livrée</option>
+              <option value="annulée">Annulée</option>
+            </select>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>Client</th><th>Téléphone</th><th>Région</th>
+                    <th>Total</th><th>Statut</th><th>Date</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="ordersTable"></tbody>
+              </table>
+              <div class="table-pagination" id="ordersPagination"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Categories Page -->
+        <div class="page" id="page-categories">
+          <div class="page-toolbar">
+            <select id="categoryTypeFilter" onchange="loadAdminCategories()">
+              <option value="all">Toutes</option>
+              <option value="brands">Marques uniquement</option>
+              <option value="models">Modèles uniquement</option>
+            </select>
+            <button class="btn-primary" onclick="openCategoryModal()">
+              <i class="fas fa-plus"></i> Nouvelle catégorie
+            </button>
+          </div>
+
+          <div class="alert alert-info" style="margin-bottom:16px;">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Marques</strong> = catégories de niveau supérieur (Volkswagen, Peugeot...) qui apparaissent dans le menu de navigation.<br>
+              <strong>Modèles</strong> = sous-catégories sous une marque (Golf 4, Peugeot 206...) qui contiennent les pièces.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <table class="table">
+                <thead>
+                  <tr><th>ID</th><th>Type</th><th>Nom</th><th>Marque parente</th><th>Slug</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="categoriesTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page" id="page-settings">
+          <div class="settings-grid">
+            <div class="card">
+              <div class="card-header"><h3><i class="fas fa-store"></i> Informations de la boutique</h3></div>
+              <div class="card-body">
+                <form onsubmit="saveSettings(event)">
+                  <div class="form-group">
+                    <label>Nom de la boutique</label>
+                    <input type="text" id="set_shop_name">
+                  </div>
+                  <div class="form-group">
+                    <label>Téléphone 1</label>
+                    <input type="text" id="set_phone1">
+                  </div>
+                  <div class="form-group">
+                    <label>Téléphone 2</label>
+                    <input type="text" id="set_phone2">
+                  </div>
+                  <div class="form-group">
+                    <label>Adresse</label>
+                    <input type="text" id="set_address">
+                  </div>
+                  <div class="form-group">
+                    <label>Facebook</label>
+                    <input type="text" id="set_facebook">
+                  </div>
+                  <div class="form-group">
+                    <label>WhatsApp</label>
+                    <input type="text" id="set_whatsapp">
+                  </div>
+                  <div class="form-group">
+                    <label>Frais de livraison (DT)</label>
+                    <input type="number" id="set_delivery_fee" step="0.5">
+                  </div>
+                  <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h3><i class="fas fa-key"></i> Changer le mot de passe</h3></div>
+              <div class="card-body">
+                <form onsubmit="changePassword(event)">
+                  <div class="form-group">
+                    <label>Mot de passe actuel</label>
+                    <input type="password" id="currentPassword" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Nouveau mot de passe</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                  </div>
+                  <div class="form-group">
+                    <label>Confirmer le nouveau mot de passe</label>
+                    <input type="password" id="confirmPassword" required minlength="6">
+                  </div>
+                  <button type="submit" class="btn-primary">
+                    <i class="fas fa-lock"></i> Changer le mot de passe
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Product Modal -->
+  <div class="modal" id="productModal">
+    <div class="modal-overlay" onclick="closeModal('productModal')"></div>
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="productModalTitle">Nouveau produit</h3>
+        <button class="modal-close" onclick="closeModal('productModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="productForm" onsubmit="saveProduct(event)">
+        <input type="hidden" id="productId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom du produit *</label>
+              <input type="text" id="productName" required placeholder="Ex: Phare Avant Golf5">
+            </div>
+            <div class="form-group">
+              <label>Catégorie</label>
+              <select id="productCategory"></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prix (DT) *</label>
+              <input type="number" id="productPrice" required step="0.01" min="0" placeholder="0.00">
+            </div>
+            <div class="form-group">
+              <label>Ancien prix (DT)</label>
+              <input type="number" id="productOldPrice" step="0.01" min="0" placeholder="Optionnel">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Stock</label>
+              <input type="number" id="productStock" min="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>Options</label>
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="productFeatured"> Produit vedette
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="productActive" checked> Actif
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="productDescription" rows="3" placeholder="Description du produit..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Image</label>
+            <div class="file-upload">
+              <input type="file" id="productImage" accept="image/*" onchange="previewImage(this)">
+              <div class="file-upload-label" id="fileLabel">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <span>Cliquez pour choisir une image</span>
+              </div>
+            </div>
+            <img id="imagePreview" class="image-preview" style="display:none;">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('productModal')">Annuler</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div class="modal" id="categoryModal">
+    <div class="modal-overlay" onclick="closeModal('categoryModal')"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="categoryModalTitle">Nouvelle catégorie</h3>
+        <button class="modal-close" onclick="closeModal('categoryModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <form id="categoryForm" onsubmit="saveCategory(event)">
+        <input type="hidden" id="categoryId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Type *</label>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="categoryType" value="brand" onchange="toggleCategoryParent()" checked>
+                <span><i class="fas fa-flag"></i> Marque (apparaît dans le menu)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="categoryType" value="model" onchange="toggleCategoryParent()">
+                <span><i class="fas fa-car-side"></i> Modèle (sous une marque)</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="parentBrandGroup" style="display:none;">
+            <label>Marque parente *</label>
+            <select id="categoryParent">
+              <option value="">-- Choisir une marque --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nom de la catégorie *</label>
+            <input type="text" id="categoryName" required placeholder="Ex: Golf 5 ou Renault">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeModal('categoryModal')">Annuler</button>
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div class="modal" id="orderModal">
+    <div class="modal-overlay" onclick="closeModal('orderModal')"></div>
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="orderModalTitle">Détails de la commande</h3>
+        <button class="modal-close" onclick="closeModal('orderModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="orderDetail"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeModal('orderModal')">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Dialog -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-small">
+      <div class="modal-header"><h3>Confirmation</h3></div>
+      <div class="modal-body"><p id="confirmMessage"></p></div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal('confirmModal')">Annuler</button>
+        <button class="btn-danger" id="confirmBtn">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/admin/js/admin.js"></script>
+</body>
+</html>

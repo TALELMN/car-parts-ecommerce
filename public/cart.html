@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panier - H.KAR Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo"><span class="logo-hash">#</span><span class="logo-text">H.KAR</span></a>
+      <nav class="nav" id="mainNav"></nav>
+      <div class="header-actions">
+        <a href="/cart.html" class="icon-btn cart-btn"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCount">0</span></a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu"></div>
+
+  <div class="breadcrumb"><div class="container"><a href="/">Accueil</a> / Panier</div></div>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title"><i class="fas fa-shopping-cart"></i> Votre Panier</h2>
+
+      <div class="cart-layout" id="cartContent">
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-summary" id="cartSummary"></div>
+      </div>
+
+      <div class="cart-empty" id="cartEmpty" style="display:none;">
+        <i class="fas fa-shopping-cart"></i>
+        <h3>Votre panier est vide</h3>
+        <p>Ajoutez des produits pour commencer vos achats</p>
+        <a href="/products.html" class="btn-primary">Voir les produits</a>
+      </div>
+
+      <div class="checkout-form" id="checkoutForm" style="display:none;">
+        <h3><i class="fas fa-shipping-fast"></i> Informations de livraison</h3>
+        <form onsubmit="submitCartOrder(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nom et Prénom *</label>
+              <input type="text" name="customer_name" placeholder="Entrez votre nom complet" required>
+            </div>
+            <div class="form-group">
+              <label>Téléphone *</label>
+              <input type="tel" name="phone" placeholder="Ex: 58 835 092" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Région *</label>
+              <select name="region" required>
+                <option value="">Sélectionnez votre région</option>
+                <option>Tunis</option><option>Ariana</option><option>Ben Arous</option>
+                <option>Manouba</option><option>Nabeul</option><option>Zaghouan</option>
+                <option>Bizerte</option><option>Béja</option><option>Jendouba</option>
+                <option>Le Kef</option><option>Siliana</option><option>Sousse</option>
+                <option>Monastir</option><option>Mahdia</option><option>Sfax</option>
+                <option>Kairouan</option><option>Kasserine</option><option>Sidi Bouzid</option>
+                <option>Gabès</option><option>Médenine</option><option>Tataouine</option>
+                <option>Gafsa</option><option>Tozeur</option><option>Kébili</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Adresse *</label>
+              <input type="text" name="address" placeholder="Entrez votre adresse complète" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes (optionnel)</label>
+            <textarea name="notes" placeholder="Instructions spéciales..." rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn-primary btn-large btn-full" id="confirmOrderBtn">
+            <i class="fas fa-check-circle"></i> Confirmer la commande - Paiement à la livraison
+          </button>
+        </form>
+      </div>
+
+      <div class="order-success" id="orderSuccess" style="display:none;">
+        <i class="fas fa-check-circle"></i>
+        <h3>Commande confirmée !</h3>
+        <p id="orderSuccessMsg"></p>
+        <a href="/products.html" class="btn-primary">Continuer vos achats</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2026 HKAR - Société Pièces Auto Ferchichi. Tous droits réservés</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await renderNav();
+      await syncCartStock();
+      renderCart();
+      updateCartCount();
+    });
+
+    // Re-fetch live stock for every cart item, drop OOS items, cap qty
+    async function syncCartStock() {
+      const cart = getCart();
+      if (!cart.length) return;
+      let dirty = false;
+      const removed = [];
+      const capped = [];
+      for (let i = cart.length - 1; i >= 0; i--) {
+        try {
+          const res = await fetch(`/api/products/${cart[i].id}`);
+          if (!res.ok) continue;
+          const p = await res.json();
+          cart[i].stock = p.stock;
+          if (p.stock <= 0) {
+            removed.push(cart[i].name);
+            cart.splice(i, 1);
+            dirty = true;
+          } else if (cart[i].quantity > p.stock) {
+            capped.push(`${cart[i].name} (limité à ${p.stock})`);
+            cart[i].quantity = p.stock;
+            dirty = true;
+          }
+        } catch (e) {}
+      }
+      if (dirty) localStorage.setItem('hkar_cart', JSON.stringify(cart));
+      if (removed.length) showToast('Retiré (rupture de stock): ' + removed.join(', '), true);
+      if (capped.length) showToast('Quantité ajustée: ' + capped.join(', '), true);
+    }
+
+    function renderCart() {
+      const cart = getCart();
+      if (cart.length === 0) {
+        document.getElementById('cartContent').style.display = 'none';
+        document.getElementById('checkoutForm').style.display = 'none';
+        document.getElementById('cartEmpty').style.display = 'flex';
+        return;
+      }
+      document.getElementById('cartEmpty').style.display = 'none';
+      document.getElementById('cartContent').style.display = 'grid';
+      document.getElementById('checkoutForm').style.display = 'block';
+
+      let itemsHTML = '';
+      let subtotal = 0;
+      cart.forEach((item, i) => {
+        const lineTotal = item.price * item.quantity;
+        subtotal += lineTotal;
+        const stock = item.stock;
+        const atMax = stock !== undefined && item.quantity >= stock;
+        const stockNote = stock !== undefined
+          ? `<small class="cart-item-stock">${stock} disponible${stock > 1 ? 's' : ''}</small>`
+          : '';
+        itemsHTML += `
+          <div class="cart-item">
+            <img src="${item.image || '/images/placeholder.svg'}" alt="${item.name}">
+            <div class="cart-item-info">
+              <h4>${item.name}</h4>
+              <p class="cart-item-price">${item.price.toFixed(2)} DT</p>
+              ${stockNote}
+            </div>
+            <div class="cart-item-qty">
+              <button onclick="updateCartQty(${i}, -1)">-</button>
+              <span>${item.quantity}</span>
+              <button onclick="updateCartQty(${i}, 1)" ${atMax ? 'disabled' : ''}>+</button>
+            </div>
+            <div class="cart-item-total">${lineTotal.toFixed(2)} DT</div>
+            <button class="cart-item-remove" onclick="removeFromCart(${i})"><i class="fas fa-trash"></i></button>
+          </div>
+        `;
+      });
+      document.getElementById('cartItems').innerHTML = itemsHTML;
+
+      const delivery = 7;
+      document.getElementById('cartSummary').innerHTML = `
+        <h3>Résumé</h3>
+        <div class="summary-row"><span>Sous-total</span><span>${subtotal.toFixed(2)} DT</span></div>
+        <div class="summary-row"><span>Livraison</span><span>${delivery.toFixed(2)} DT</span></div>
+        <div class="summary-row summary-total"><span>Total</span><span>${(subtotal + delivery).toFixed(2)} DT</span></div>
+      `;
+    }
+
+    function updateCartQty(index, delta) {
+      const cart = getCart();
+      const item = cart[index];
+      const newQty = item.quantity + delta;
+      if (newQty < 1) return;
+      if (item.stock !== undefined && newQty > item.stock) {
+        showToast(`Stock maximum atteint: ${item.stock}`, true);
+        return;
+      }
+      item.quantity = newQty;
+      localStorage.setItem('hkar_cart', JSON.stringify(cart));
+      renderCart();
+      updateCartCount();
+    }
+
+    function removeFromCart(index) {
+      const cart = getCart();
+      cart.splice(index, 1);
+      localStorage.setItem('hkar_cart', JSON.stringify(cart));
+      renderCart();
+      updateCartCount();
+    }
+
+    async function submitCartOrder(e) {
+      e.preventDefault();
+      const form = e.target;
+      const cart = getCart();
+      if (!cart.length) return;
+      const btn = document.getElementById('confirmOrderBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
+
+      const order = {
+        customer_name: form.customer_name.value,
+        phone: form.phone.value,
+        region: form.region.value,
+        address: form.address.value,
+        notes: form.notes.value,
+        items: cart.map(item => ({
+          product_id: item.id, product_name: item.name,
+          quantity: item.quantity, price: item.price
+        }))
+      };
+      const res = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) });
+      const data = await res.json();
+
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmer la commande - Paiement à la livraison';
+
+      if (data.id) {
+        localStorage.removeItem('hkar_cart');
+        updateCartCount();
+        document.getElementById('cartContent').style.display = 'none';
+        document.getElementById('checkoutForm').style.display = 'none';
+        document.getElementById('orderSuccess').style.display = 'flex';
+        document.getElementById('orderSuccessMsg').textContent = `Commande #${data.id} confirmée ! Total: ${data.total.toFixed(2)} DT. Nous vous contacterons bientôt.`;
+      } else {
+        showToast('Erreur: ' + (data.error || 'Veuillez réessayer'), true);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tous les Produits - H.KAR Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo"><span class="logo-hash">#</span><span class="logo-text">H.KAR</span></a>
+      <nav class="nav" id="mainNav"></nav>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
+        <a href="/cart.html" class="icon-btn cart-btn"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCount">0</span></a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+    <div class="search-bar" id="searchBar">
+      <input type="text" placeholder="Rechercher des pièces..." id="searchInput" onkeypress="if(event.key==='Enter') doSearch()">
+      <button onclick="doSearch()"><i class="fas fa-search"></i></button>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu"></div>
+
+  <div class="breadcrumb">
+    <div class="container" id="breadcrumbContent">
+      <a href="/">Accueil</a> / <span>Produits</span>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="catalog-header">
+        <h2 id="catalogTitle">Tous les produits</h2>
+        <span class="result-count" id="resultCount"></span>
+        <div class="catalog-sort">
+          <label>Trier par</label>
+          <select id="sortSelect" onchange="loadProducts()">
+            <option value="">Plus récents</option>
+            <option value="price_asc">Prix croissant</option>
+            <option value="price_desc">Prix décroissant</option>
+            <option value="name">Nom A-Z</option>
+          </select>
+        </div>
+      </div>
+      <div class="products-grid" id="productsGrid"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2026 HKAR - Société Pièces Auto Ferchichi. Tous droits réservés</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let currentPage = 1;
+    document.addEventListener('DOMContentLoaded', async () => {
+      await renderNav();
+      await setupBreadcrumb();
+      loadProducts();
+      updateCartCount();
+    });
+
+    async function setupBreadcrumb() {
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get('category');
+      const search = params.get('search');
+      const bc = document.getElementById('breadcrumbContent');
+
+      if (search) {
+        document.getElementById('catalogTitle').textContent = `Résultats pour "${search}"`;
+        bc.innerHTML = `<a href="/">Accueil</a> / Recherche : "${search}"`;
+        return;
+      }
+
+      if (category) {
+        const cats = await (await fetch('/api/categories')).json();
+        const cat = cats.find(c => c.slug === category);
+        if (cat) {
+          document.getElementById('catalogTitle').textContent = `Pièces ${cat.name}`;
+          if (cat.parent_id) {
+            const parent = cats.find(c => c.id === cat.parent_id);
+            bc.innerHTML = `<a href="/">Accueil</a> / <a href="/brand.html?slug=${parent.slug}">${parent.name}</a> / ${cat.name}`;
+          } else {
+            bc.innerHTML = `<a href="/">Accueil</a> / ${cat.name}`;
+          }
+        }
+      }
+    }
+
+    async function loadProducts() {
+      const params = new URLSearchParams(window.location.search);
+      const category = params.get('category');
+      const search = params.get('search');
+      const sort = document.getElementById('sortSelect').value;
+
+      let url = `/api/products?page=${currentPage}&limit=20`;
+      if (category) url += `&category=${category}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (sort) url += `&sort=${sort}`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+      document.getElementById('resultCount').textContent = `${data.total} Résultat${data.total > 1 ? 's' : ''}`;
+      document.getElementById('productsGrid').innerHTML = data.products.length
+        ? data.products.map(p => productCard(p)).join('')
+        : '<div class="no-results-block"><i class="fas fa-search"></i><p>Aucun produit trouvé</p></div>';
+
+      let pagHTML = '';
+      for (let i = 1; i <= data.pages; i++) {
+        pagHTML += `<button class="${i === data.page ? 'active' : ''}" onclick="currentPage=${i};loadProducts();window.scrollTo(0,0);">${i}</button>`;
+      }
+      document.getElementById('pagination').innerHTML = pagHTML;
+    }
+  </script>
+</body>
+</html>

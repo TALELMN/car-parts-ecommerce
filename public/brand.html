@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modèles - H.KAR Shop</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo"><span class="logo-hash">#</span><span class="logo-text">H.KAR</span></a>
+      <nav class="nav" id="mainNav"></nav>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
+        <a href="/cart.html" class="icon-btn cart-btn"><i class="fas fa-shopping-cart"></i><span class="cart-count" id="cartCount">0</span></a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+    <div class="search-bar" id="searchBar">
+      <input type="text" placeholder="Rechercher des pièces..." id="searchInput" onkeypress="if(event.key==='Enter') doSearch()">
+      <button onclick="doSearch()"><i class="fas fa-search"></i></button>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" onclick="toggleMobileMenu()"><i class="fas fa-times"></i></button>
+    <a href="/">Accueil</a>
+    <a href="/products.html">Toutes les pièces</a>
+    <a href="/cart.html"><i class="fas fa-shopping-cart"></i> Panier</a>
+  </div>
+
+  <div class="breadcrumb">
+    <div class="container">
+      <a href="/">Accueil</a> / <span id="brandBreadcrumb">...</span>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="brand-header" id="brandHeader"></div>
+      <h2 class="section-title" id="modelsTitle">Choisissez un modèle</h2>
+      <div class="models-grid" id="modelsGrid"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2026 HKAR - Société Pièces Auto Ferchichi. Tous droits réservés</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await renderNav();
+      updateCartCount();
+      const params = new URLSearchParams(window.location.search);
+      const slug = params.get('slug');
+      if (slug) loadBrand(slug);
+    });
+
+    async function loadBrand(slug) {
+      const res = await fetch(`/api/brands/${slug}/models`);
+      if (!res.ok) {
+        document.getElementById('modelsGrid').innerHTML = '<p class="no-results">Marque introuvable</p>';
+        return;
+      }
+      const data = await res.json();
+      document.title = data.brand.name + ' - H.KAR Shop';
+      document.getElementById('brandBreadcrumb').textContent = data.brand.name;
+      document.getElementById('modelsTitle').textContent = `Modèles ${data.brand.name}`;
+
+      if (data.models.length === 0) {
+        document.getElementById('modelsGrid').innerHTML = `
+          <div class="no-results-block">
+            <i class="fas fa-info-circle"></i>
+            <p>Aucun modèle disponible pour ${data.brand.name}.</p>
+            <a href="/products.html?category=${slug}" class="btn-primary">Voir toutes les pièces</a>
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('modelsGrid').innerHTML = data.models.map(m => `
+        <a href="/products.html?category=${m.slug}" class="model-card">
+          <div class="model-card-icon"><i class="fas fa-car-side"></i></div>
+          <h3>${m.name}</h3>
+          <span class="model-card-count">${m.product_count} pièce${m.product_count > 1 ? 's' : ''}</span>
+        </a>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

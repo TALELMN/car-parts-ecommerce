@@ -1,0 +1,11 @@
+node_modules/
+database.json
+uploads/*
+!uploads/.gitkeep
+*.log
+.env
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+cookies.txt

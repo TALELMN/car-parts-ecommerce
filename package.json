@@ -1,0 +1,16 @@
+{
+  "name": "hkar-shop",
+  "version": "1.0.0",
+  "description": "H.KAR - Pièces Auto Ferchichi - Boutique en ligne",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "bcryptjs": "^2.4.3",
+    "express-session": "^1.18.1"
+  }
+}

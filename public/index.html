@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H.KAR Shop - Pièces Auto - Paiement à la livraison</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a href="/" class="logo">
+        <span class="logo-hash">#</span>
+        <span class="logo-text">H.KAR</span>
+      </a>
+      <nav class="nav" id="mainNav"></nav>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleSearch()"><i class="fas fa-search"></i></button>
+        <a href="/cart.html" class="icon-btn cart-btn">
+          <i class="fas fa-shopping-cart"></i>
+          <span class="cart-count" id="cartCount">0</span>
+        </a>
+        <button class="mobile-menu-btn" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+    <div class="search-bar" id="searchBar">
+      <input type="text" placeholder="Rechercher des pièces..." id="searchInput" onkeypress="if(event.key==='Enter') doSearch()">
+      <button onclick="doSearch()"><i class="fas fa-search"></i></button>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobileMenu"></div>
+
+  <section class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-logos">
+        <div class="hero-logo-circle">
+          <span class="logo-hash-big">#</span>
+          <span class="hero-logo-name">H.KAR</span>
+          <span class="hero-logo-sub">CARROSSERIE AUTO</span>
+        </div>
+      </div>
+      <h1>PIÈCES AUTO FERCHICHI</h1>
+      <p>Vente en ligne de pièces de carrosserie automobile</p>
+      <p class="hero-delivery"><i class="fas fa-truck"></i> Paiement à la livraison dans toute la Tunisie</p>
+      <a href="/products.html" class="btn-primary btn-large">Voir tous les produits <i class="fas fa-arrow-right"></i></a>
+    </div>
+  </section>
+
+  <section class="contact-banner">
+    <div class="container">
+      <div class="contact-items">
+        <div class="contact-item">
+          <span class="contact-label">CONTACT</span>
+        </div>
+        <a href="tel:+21658835092" class="contact-item phone-item">
+          <i class="fas fa-phone-alt"></i> +216 58 835 092
+        </a>
+        <a href="tel:+21656084023" class="contact-item phone-item">
+          <i class="fas fa-phone-alt"></i> +216 56 084 023
+        </a>
+        <div class="contact-item location-item">
+          <i class="fas fa-map-marker-alt"></i> Sidi Hssin / Face rond point Visite technique
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Produits Vedettes</h2>
+      <div class="products-grid" id="featuredProducts"></div>
+    </div>
+  </section>
+
+  <section class="section section-dark">
+    <div class="container">
+      <h2 class="section-title">Nos Marques</h2>
+      <div class="brands-grid" id="brandsGrid"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>Contactez-nous</h4>
+          <a href="tel:+21658835092"><i class="fas fa-phone"></i> +216 58 835 092</a>
+          <a href="tel:+21656084023"><i class="fas fa-phone"></i> +216 56 084 023</a>
+        </div>
+        <div class="footer-col">
+          <h4>A propos du magasin</h4>
+          <a href="#">À propos</a>
+          <a href="#">Méthodes de paiement</a>
+          <a href="#">Expédition et livraison</a>
+        </div>
+        <div class="footer-col">
+          <h4>Termes et politiques</h4>
+          <a href="#">Conditions d'utilisation</a>
+          <a href="#">Retours & échanges</a>
+          <a href="#">Politique de Confidentialité</a>
+        </div>
+      </div>
+      <div class="footer-social">
+        <a href="#" class="social-link"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="social-link"><i class="fab fa-whatsapp"></i></a>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 HKAR - Société Pièces Auto Ferchichi. Tous droits réservés</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await renderNav();
+      loadFeaturedProducts();
+      loadBrandsHomepage();
+      updateCartCount();
+    });
+
+    async function loadFeaturedProducts() {
+      const res = await fetch('/api/products?featured=1&limit=8');
+      const data = await res.json();
+      const grid = document.getElementById('featuredProducts');
+      grid.innerHTML = data.products.length
+        ? data.products.map(p => productCard(p)).join('')
+        : '<p class="no-results">Aucun produit vedette pour le moment</p>';
+    }
+
+    async function loadBrandsHomepage() {
+      const res = await fetch('/api/brands');
+      const brands = await res.json();
+      const grid = document.getElementById('brandsGrid');
+      grid.innerHTML = brands.map(b => `
+        <a href="/brand.html?slug=${b.slug}" class="brand-card">
+          <i class="fas fa-car"></i>
+          <h3>${b.name}</h3>
+          <p>${b.model_count} modèle${b.model_count > 1 ? 's' : ''} disponible${b.model_count > 1 ? 's' : ''}</p>
+        </a>
+      `).join('') || '<p class="no-results">Aucune marque disponible</p>';
+    }
+  </script>
+</body>
+</html>
